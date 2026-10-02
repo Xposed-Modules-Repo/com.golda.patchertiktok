@@ -1,6 +1,6 @@
 # TiktokPatchXposed
 
-[English](README.en.md) | Русский
+**Русский** | [English](README-EN.md)
 
 LSPosed-модуль для TikTok: убирает рекламу, открывает функции, которые TikTok включает не всем, и добавляет пару полезных мелочей. Все настройки находятся прямо в TikTok.
 

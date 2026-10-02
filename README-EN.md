@@ -1,6 +1,6 @@
 # TiktokPatchXposed
 
-English | [Русский](README.md)
+[Русский](README.md) | **English**
 
 An LSPosed module for TikTok. It removes ads, unlocks features TikTok only gives to some users, and adds a few useful extras. All settings are inside TikTok itself.
 
