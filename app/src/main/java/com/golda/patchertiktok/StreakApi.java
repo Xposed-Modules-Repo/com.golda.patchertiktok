@@ -7,7 +7,11 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -132,6 +136,58 @@ final class StreakApi {
         long end = number(item, "endAt");
         if (!StreakEligibility.isAtRisk(true, true, start, before, end, now)) return null;
         return new Candidate((String) conversation, peer, start, before, end);
+    }
+
+    /**
+     * TikTok keeps several records per conversation: the current window and stale ones from
+     * earlier windows. Only the newest window of each conversation counts; two records with the
+     * same newest window that disagree make the conversation ambiguous, and it is skipped.
+     */
+    List<Candidate> candidates(List<?> items, String account, long now) throws ReflectiveOperationException {
+        Map<String, Object> latest = new LinkedHashMap<>();
+        Set<String> ambiguous = new HashSet<>();
+        for (Object item : items) {
+            if (!model.isInstance(item)) continue;
+            Object id = field(model, "convId").get(item);
+            if (!(id instanceof String) || ((String) id).isEmpty()) continue;
+            String conversation = (String) id;
+            Object previous = latest.get(conversation);
+            long end = StreakKeys.seconds(number(item, "endAt"));
+            long previousEnd = previous == null ? Long.MIN_VALUE : StreakKeys.seconds(number(previous, "endAt"));
+            if (end > previousEnd) {
+                latest.put(conversation, item);
+                ambiguous.remove(conversation);
+            } else if (end == previousEnd) {
+                Candidate a = candidate(item, account, now);
+                Candidate b = candidate(previous, account, now);
+                if ((a == null) != (b == null) || (a != null && !a.peer.equals(b.peer))) ambiguous.add(conversation);
+            }
+        }
+        List<Candidate> result = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : latest.entrySet()) {
+            if (ambiguous.contains(entry.getKey())) continue;
+            Candidate candidate = candidate(entry.getValue(), account, now);
+            if (candidate != null) result.add(candidate);
+        }
+        return result;
+    }
+
+    /** "active=N healthy=N atRisk=N expired=N" for one-to-one streaks; used in the check log. */
+    String summary(List<?> items, long now) throws ReflectiveOperationException {
+        int active = 0;
+        int healthy = 0;
+        int atRisk = 0;
+        int expired = 0;
+        for (Object item : items) {
+            if (!model.isInstance(item) || number(item, "streak") <= 0 || number(item, "convType") != 1) continue;
+            active++;
+            long before = StreakKeys.seconds(number(item, "activeBefore")) * 1000L;
+            long end = StreakKeys.seconds(number(item, "endAt")) * 1000L;
+            if (now < before) healthy++;
+            else if (now < end) atRisk++;
+            else expired++;
+        }
+        return "active=" + active + " healthy=" + healthy + " atRisk=" + atRisk + " expired=" + expired;
     }
 
     long nextRiskMillis(Object item, long now) throws ReflectiveOperationException {

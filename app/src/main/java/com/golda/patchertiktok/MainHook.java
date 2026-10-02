@@ -45,8 +45,7 @@ public final class MainHook implements IXposedHookLoadPackage {
     /** Runs once the Application context exists, before TikTok's own onCreate. */
     private static void startup(Application app, ClassLoader loader, boolean main) {
         Prefs.load(app);
-        DeviceSignals.refresh(app);
-        run("region", RegionSpoof::install);
+        run("region", () -> RegionSpoof.install(loader));
         if (RegionSpoof.active()) run("recommendation", () -> Recommendation.install(loader));
         if (!main) return;
         I18n.use(app.getResources().getConfiguration().getLocales().get(0));

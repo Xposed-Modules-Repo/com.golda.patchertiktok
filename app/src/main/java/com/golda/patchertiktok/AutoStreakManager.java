@@ -8,13 +8,8 @@ import android.os.Looper;
 import android.os.SystemClock;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -167,33 +162,16 @@ final class AutoStreakManager {
             else skipped++;
             if (!"PREVIOUS_ATTEMPT".equals(result) && !"CANCELLED".equals(result)) Thread.sleep(3_000L);
         }
-        RuntimeLog.log("streak check: records=" + items.size() + " eligible=" + candidates.size()
-                + " confirmed=" + confirmed + " unresolved=" + unresolved + " skipped=" + skipped);
         long next = Long.MAX_VALUE;
         long now = System.currentTimeMillis();
         for (Object item : items) next = Math.min(next, api.nextRiskMillis(item, now));
+        RuntimeLog.log("streak check: records=" + items.size() + " " + api.summary(items, now)
+                + " eligible=" + candidates.size() + " confirmed=" + confirmed + " unresolved=" + unresolved
+                + " skipped=" + skipped + (next == Long.MAX_VALUE ? "" : " nextRiskIn=" + (next - now) / 60_000L + "m"));
         if (next != Long.MAX_VALUE) schedule(Math.max(MIN_CHECK_INTERVAL_MS, next - now + 1_000L));
     }
 
     private static List<StreakApi.Candidate> candidates(List<?> items, String account) throws Exception {
-        Map<String, StreakApi.Candidate> selected = new LinkedHashMap<>();
-        Set<String> conflicting = new HashSet<>();
-        long now = System.currentTimeMillis();
-        for (Object item : items) {
-            if (item == null) continue;
-            Object id = StreakApi.field(item.getClass(), "convId").get(item);
-            if (!(id instanceof String) || ((String) id).isEmpty()) continue;
-            String conversation = (String) id;
-            StreakApi.Candidate candidate = api.candidate(item, account, now);
-            if (candidate == null) {
-                conflicting.add(conversation);
-                continue;
-            }
-            StreakApi.Candidate previous = selected.put(conversation, candidate);
-            if (previous != null && (!previous.peer.equals(candidate.peer)
-                    || !previous.window().equals(candidate.window()))) conflicting.add(conversation);
-        }
-        for (String conversation : conflicting) selected.remove(conversation);
-        return new ArrayList<>(selected.values());
+        return api.candidates(items, account, System.currentTimeMillis());
     }
 }
