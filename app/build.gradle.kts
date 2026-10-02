@@ -8,16 +8,23 @@ android {
 
     defaultConfig {
         applicationId = "com.golda.patchertiktok"
-        minSdk = 24
+        minSdk = 27
         targetSdk = 36
-        versionCode = 37
-        versionName = "3.12"
-
+        versionCode = 41
+        versionName = "4.0"
+    }
+    buildFeatures {
+        buildConfig = true
+    }
+    androidResources {
+        // UI strings live in code; only the LSPosed description is localized as a resource.
+        localeFilters += listOf("en", "ru", "uk", "be", "de", "es", "pt", "fr", "it", "pl", "tr", "in")
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -25,13 +32,21 @@ android {
             )
         }
     }
+    packaging {
+        resources.excludes += listOf("META-INF/**", "kotlin/**", "**.properties")
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+    lint {
+        // ModSettingsActivity is created by the hook inside TikTok, not from this manifest.
+        disable += "Instantiatable"
     }
 }
 
 dependencies {
     testImplementation(libs.junit)
     compileOnly(files("libs/xposed-api-82.jar"))
+    testImplementation(files("libs/xposed-api-82.jar"))
 }

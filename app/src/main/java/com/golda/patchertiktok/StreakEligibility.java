@@ -15,7 +15,7 @@ final class StreakEligibility {
             long nowMillis
     ) {
         if (!hasStreak || !hasPeer || activeStart <= 0 || activeBefore <= 0) return false;
-        if (endAt <= activeBefore) return false;
+        if (activeStart > activeBefore || endAt <= activeBefore) return false;
 
         long now = usesMilliseconds(activeStart, activeBefore, endAt)
                 ? nowMillis
