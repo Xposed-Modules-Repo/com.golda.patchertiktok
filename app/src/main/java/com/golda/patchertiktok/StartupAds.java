@@ -2,9 +2,6 @@ package com.golda.patchertiktok;
 
 import java.lang.reflect.Method;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 
 /** Splash and TopView ads shown when TikTok opens. A/B overrides disable them at the source. */
 final class StartupAds {
@@ -20,15 +17,15 @@ final class StartupAds {
     static void install(ClassLoader loader) {
         if (!Prefs.on(Prefs.ADS)) return;
         int tasks = 0;
-        XC_MethodHook skip = new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam param) { param.setResult(null); }
+        Hooks.Hook skip = new Hooks.Hook() {
+            @Override protected void before(Hooks.Call param) { param.setResult(null); }
         };
         for (String name : PRELOAD_TASKS) {
-            Class<?> task = XposedHelpers.findClassIfExists(name, loader);
+            Class<?> task = Hooks.findClass(name, loader);
             if (task == null) continue;
             for (Method method : task.getDeclaredMethods()) {
                 if ("run".equals(method.getName()) && method.getReturnType() == void.class) {
-                    XposedBridge.hookMethod(method, skip);
+                    Hooks.hook(method, skip);
                     tasks++;
                 }
             }
@@ -37,13 +34,13 @@ final class StartupAds {
         int gates = 0;
         for (String entry : Discovery.methodsUsing("splash_ad_enable")) {
             String[] parts = entry.split("#", 2);
-            Class<?> owner = XposedHelpers.findClassIfExists(parts[0], loader);
+            Class<?> owner = Hooks.findClass(parts[0], loader);
             if (owner == null) continue;
             for (Method method : owner.getDeclaredMethods()) {
                 if (method.getName().equals(parts[1]) && method.getReturnType() == boolean.class
                         && method.getParameterTypes().length == 0) {
-                    XposedBridge.hookMethod(method, new XC_MethodHook() {
-                        @Override protected void beforeHookedMethod(MethodHookParam param) { param.setResult(false); }
+                    Hooks.hook(method, new Hooks.Hook() {
+                        @Override protected void before(Hooks.Call param) { param.setResult(false); }
                     });
                     gates++;
                 }

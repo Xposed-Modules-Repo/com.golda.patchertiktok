@@ -7,9 +7,6 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 
 /**
  * Optional region spoof. Installed only when a region is selected at startup, so turning it
@@ -58,12 +55,12 @@ final class RegionSpoof {
         for (Method method : TelephonyManager.class.getDeclaredMethods()) {
             Object value = values.get(method.getName());
             if (value == null || !compatible(method.getReturnType(), value)) continue;
-            XposedBridge.hookMethod(method, constant(value));
+            Hooks.hook(method, constant(value));
         }
     }
 
     private static void hookSubscriptionInfo(Regions.Region selected) {
-        Class<?> type = XposedHelpers.findClassIfExists("android.telephony.SubscriptionInfo", null);
+        Class<?> type = Hooks.findClass("android.telephony.SubscriptionInfo", null);
         if (type == null) return;
         for (Method method : type.getDeclaredMethods()) {
             if (method.getParameterTypes().length != 0) continue;
@@ -78,15 +75,15 @@ final class RegionSpoof {
                 case "getDisplayName": value = selected.carrier; break;
                 default: continue;
             }
-            XposedBridge.hookMethod(method, constant(value));
+            Hooks.hook(method, constant(value));
         }
     }
 
     private static void hookSystemProperties(Regions.Region selected) {
-        Class<?> type = XposedHelpers.findClassIfExists("android.os.SystemProperties", null);
+        Class<?> type = Hooks.findClass("android.os.SystemProperties", null);
         if (type == null) return;
-        XC_MethodHook hook = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) {
+        Hooks.Hook hook = new Hooks.Hook() {
+            @Override protected void after(Hooks.Call param) {
                 Object key = param.args[0];
                 if (!(key instanceof String) || !((String) key).startsWith("gsm.")) return;
                 switch ((String) key) {
@@ -108,8 +105,8 @@ final class RegionSpoof {
             }
         };
         try {
-            XposedHelpers.findAndHookMethod(type, "get", String.class, hook);
-            XposedHelpers.findAndHookMethod(type, "get", String.class, String.class, hook);
+            Hooks.findAndHook(type, "get", String.class, hook);
+            Hooks.findAndHook(type, "get", String.class, String.class, hook);
         } catch (Throwable error) {
             RuntimeLog.log("system properties spoof unavailable: " + error.getClass().getSimpleName());
         }
@@ -121,7 +118,7 @@ final class RegionSpoof {
      * follow the system locale, which would still report the real country.
      */
     private static void hookRequestParams(ClassLoader loader, Regions.Region selected) {
-        Class<?> producer = XposedHelpers.findClassIfExists(FEATURE_PRODUCER, loader);
+        Class<?> producer = Hooks.findClass(FEATURE_PRODUCER, loader);
         if (producer == null) {
             RuntimeLog.log("request region params unavailable: FeatureProducer not found");
             return;
@@ -144,8 +141,8 @@ final class RegionSpoof {
             }
             if (nameIndex < 0) continue;
             int name = nameIndex;
-            XposedBridge.hookMethod(method, new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam param) {
+            Hooks.hook(method, new Hooks.Hook() {
+                @Override protected void after(Hooks.Call param) {
                     String value = features.get(param.args[name]);
                     if (value != null) param.setResult(value);
                 }
@@ -162,9 +159,9 @@ final class RegionSpoof {
         return false;
     }
 
-    private static XC_MethodHook constant(Object value) {
-        return new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam param) { param.setResult(value); }
+    private static Hooks.Hook constant(Object value) {
+        return new Hooks.Hook() {
+            @Override protected void before(Hooks.Call param) { param.setResult(value); }
         };
     }
 }

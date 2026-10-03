@@ -15,7 +15,7 @@ final class I18n {
         NEW_PROFILE_DESC, EXTRA_FEATURES, EXTRA_FEATURES_DESC, SECTION_SHARING, NO_WATERMARK,
         DOWNLOAD_ANY, DOWNLOAD_ANY_DESC, SCREENSHOTS, SCREENSHOTS_DESC, CLEAN_LINKS, CLEAN_LINKS_DESC,
         SECTION_REGION, REGION, REGION_DESC, REGION_OFF, SEARCH, SECTION_STREAKS, AUTO_STREAK,
-        AUTO_STREAK_DESC, SECTION_ABOUT, VERSION, SOURCE_CODE, RESTART_HINT, RESTART, OFF, BACK
+        AUTO_STREAK_DESC, SECTION_ABOUT, VERSION, SOURCE_CODE, RESTART_HINT, RESTART, OFF, BACK, STREAK_CHANNEL, STREAK_FAILED_TITLE, STREAK_FAILED_TEXT
     }
 
     private static final Map<String, String[]> TABLES = new HashMap<>();
@@ -41,7 +41,7 @@ final class I18n {
                 "Streaks",
                 "Auto streaks", "Keeps existing streaks in private chats alive while TikTok is open",
                 "About", "Version", "Source code", "Restart TikTok to apply the changes", "Restart",
-                "Off", "Back"});
+                "Off", "Back", "Auto streaks", "Auto streak not sent", "TikTok did not accept an automatic streak. Check the chat; if this repeats, turn auto streaks off for a while."});
         TABLES.put("ru", new String[]{
                 "TiktokPatchXposed", "Лента",
                 "Блокировать рекламу", "В ленте, при запуске и в других списках видео",
@@ -62,7 +62,7 @@ final class I18n {
                 "Огоньки",
                 "Автоогоньки", "Поддерживает существующие огоньки в личных чатах, пока TikTok открыт",
                 "О модуле", "Версия", "Исходный код", "Перезапустите TikTok, чтобы применить изменения", "Перезапустить",
-                "Выкл.", "Назад"});
+                "Выкл.", "Назад", "Автоогоньки", "Автоогонёк не отправлен", "TikTok не принял автоматический огонёк. Проверьте чат; если это повторяется, выключите автоогоньки на время."});
         TABLES.put("uk", new String[]{
                 "TiktokPatchXposed", "Стрічка",
                 "Блокувати рекламу", "У стрічці, під час запуску та в інших списках відео",
@@ -83,7 +83,7 @@ final class I18n {
                 "Вогники",
                 "Автовогники", "Підтримує наявні вогники в особистих чатах, поки TikTok відкрито",
                 "Про модуль", "Версія", "Вихідний код", "Перезапустіть TikTok, щоб застосувати зміни", "Перезапустити",
-                "Вимк.", "Назад"});
+                "Вимк.", "Назад", "Автовогники", "Автовогник не надіслано", "TikTok не прийняв автоматичний вогник. Перевірте чат; якщо це повторюється, вимкніть автовогники на деякий час."});
         TABLES.put("de", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Werbung blockieren", "Im Feed, beim Start und in anderen Videolisten",
@@ -104,7 +104,7 @@ final class I18n {
                 "Flammen",
                 "Auto-Flammen", "Hält bestehende Flammen in Privatchats aktiv, solange TikTok geöffnet ist",
                 "Info", "Version", "Quellcode", "Starte TikTok neu, um die Änderungen zu übernehmen", "Neu starten",
-                "Aus", "Zurück"});
+                "Aus", "Zurück", "Auto-Flammen", "Auto-Flamme nicht gesendet", "TikTok hat eine automatische Flamme nicht angenommen. Prüfe den Chat; wenn das öfter passiert, schalte Auto-Flammen eine Weile aus."});
         TABLES.put("es", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Bloquear anuncios", "En el feed, al iniciar y en otras listas de vídeos",
@@ -125,7 +125,7 @@ final class I18n {
                 "Rachas",
                 "Rachas automáticas", "Mantiene las rachas existentes en chats privados mientras TikTok está abierto",
                 "Acerca de", "Versión", "Código fuente", "Reinicia TikTok para aplicar los cambios", "Reiniciar",
-                "Desactivado", "Atrás"});
+                "Desactivado", "Atrás", "Rachas automáticas", "Racha automática no enviada", "TikTok no aceptó una racha automática. Revisa el chat; si se repite, desactiva las rachas automáticas por un tiempo."});
         TABLES.put("pt", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Bloquear anúncios", "No feed, ao abrir e em outras listas de vídeos",
@@ -146,7 +146,7 @@ final class I18n {
                 "Sequências",
                 "Sequências automáticas", "Mantém as sequências existentes em chats privados enquanto o TikTok está aberto",
                 "Sobre", "Versão", "Código-fonte", "Reinicie o TikTok para aplicar as alterações", "Reiniciar",
-                "Desativado", "Voltar"});
+                "Desativado", "Voltar", "Sequências automáticas", "Sequência automática não enviada", "O TikTok não aceitou uma sequência automática. Verifique o chat; se isso se repetir, desative as sequências automáticas por um tempo."});
         TABLES.put("fr", new String[]{
                 "TiktokPatchXposed", "Fil",
                 "Bloquer les publicités", "Dans le fil, au démarrage et dans les autres listes de vidéos",
@@ -167,7 +167,7 @@ final class I18n {
                 "Séries",
                 "Séries automatiques", "Maintient les séries existantes dans les chats privés tant que TikTok est ouvert",
                 "À propos", "Version", "Code source", "Redémarrez TikTok pour appliquer les modifications", "Redémarrer",
-                "Désactivé", "Retour"});
+                "Désactivé", "Retour", "Séries automatiques", "Série automatique non envoyée", "TikTok n'a pas accepté une série automatique. Vérifiez la discussion ; si cela se répète, désactivez les séries automatiques pendant un moment."});
         TABLES.put("it", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Blocca pubblicità", "Nel feed, all'avvio e in altri elenchi di video",
@@ -188,7 +188,7 @@ final class I18n {
                 "Serie",
                 "Serie automatiche", "Mantiene attive le serie esistenti nelle chat private mentre TikTok è aperto",
                 "Info", "Versione", "Codice sorgente", "Riavvia TikTok per applicare le modifiche", "Riavvia",
-                "Disattivato", "Indietro"});
+                "Disattivato", "Indietro", "Serie automatiche", "Serie automatica non inviata", "TikTok non ha accettato una serie automatica. Controlla la chat; se succede di nuovo, disattiva le serie automatiche per un po'."});
         TABLES.put("pl", new String[]{
                 "TiktokPatchXposed", "Kanał",
                 "Blokuj reklamy", "W kanale, przy uruchamianiu i na innych listach filmów",
@@ -209,7 +209,7 @@ final class I18n {
                 "Serie",
                 "Automatyczne serie", "Podtrzymuje istniejące serie w czatach prywatnych, gdy TikTok jest otwarty",
                 "Informacje", "Wersja", "Kod źródłowy", "Uruchom ponownie TikToka, aby zastosować zmiany", "Uruchom ponownie",
-                "Wył.", "Wstecz"});
+                "Wył.", "Wstecz", "Automatyczne serie", "Automatyczna seria nie została wysłana", "TikTok nie przyjął automatycznej serii. Sprawdź czat; jeśli to się powtarza, wyłącz na jakiś czas automatyczne serie."});
         TABLES.put("tr", new String[]{
                 "TiktokPatchXposed", "Akış",
                 "Reklamları engelle", "Akışta, açılışta ve diğer video listelerinde",
@@ -230,7 +230,7 @@ final class I18n {
                 "Seriler",
                 "Otomatik seriler", "TikTok açıkken özel sohbetlerdeki mevcut serileri sürdürür",
                 "Hakkında", "Sürüm", "Kaynak kodu", "Değişiklikleri uygulamak için TikTok'u yeniden başlat", "Yeniden başlat",
-                "Kapalı", "Geri"});
+                "Kapalı", "Geri", "Otomatik seriler", "Otomatik seri gönderilmedi", "TikTok otomatik bir seriyi kabul etmedi. Sohbeti kontrol et; tekrar olursa otomatik serileri bir süre kapat."});
         TABLES.put("id", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Blokir iklan", "Di feed, saat dibuka, dan di daftar video lainnya",
@@ -251,7 +251,7 @@ final class I18n {
                 "Streak",
                 "Streak otomatis", "Menjaga streak yang ada di obrolan pribadi selama TikTok terbuka",
                 "Tentang", "Versi", "Kode sumber", "Mulai ulang TikTok untuk menerapkan perubahan", "Mulai ulang",
-                "Nonaktif", "Kembali"});
+                "Nonaktif", "Kembali", "Streak otomatis", "Streak otomatis tidak terkirim", "TikTok tidak menerima streak otomatis. Periksa obrolan; jika terulang, matikan streak otomatis untuk sementara."});
     }
 
     private static volatile String[] current = TABLES.get("en");

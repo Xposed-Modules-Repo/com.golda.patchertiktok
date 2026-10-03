@@ -4,7 +4,7 @@
 
 An LSPosed module for TikTok. It removes ads, unlocks features TikTok only gives to some users, and adds a few useful extras. All settings are inside TikTok itself.
 
-Current version: 4.0. Tested on TikTok 47.1.4 from Google Play, Android 16.
+Current version: 4.0.1. Tested on TikTok 47.1.4 from Google Play, Android 16.
 
 ## Features
 
@@ -55,9 +55,11 @@ Older versions had to be adjusted to new class names after every TikTok update. 
 
 Both `com.zhiliaoapp.musically` and `com.ss.android.ugc.trill` are supported (the latter hasn't been tested on a device).
 
+The module uses LSPosed's modern API (libxposed 101–102), so newer LSPosed builds no longer mark it as "legacy". Older LSPosed 1.9.x is still supported: the APK keeps the old loading path for it.
+
 ## Auto streaks
 
-Turned on manually. The module only renews existing streaks in one-to-one chats, and only when a streak is about to expire. It uses TikTok's `spark_v1` interaction, not a text message. It works while TikTok is open: no alarms and no background services. Every send is recorded first, so the same streak isn't renewed twice in a day.
+Turned on manually. The module only renews existing streaks in one-to-one chats, and only when a streak is about to expire. It uses TikTok's `spark_v1` interaction, not a text message. It works while TikTok is open: no alarms and no background services. Every send is recorded first, so the same streak isn't renewed twice in a day. The module pauses a few seconds between chats, as if you were going through them by hand. If TikTok doesn't accept a streak, you'll get a notification so you can check that chat yourself.
 
 ## Building
 

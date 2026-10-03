@@ -8,9 +8,6 @@ import android.view.View;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 
 /**
  * Last line of defence: an ad inserted into the feed after filtering is skipped with a swipe
@@ -24,7 +21,7 @@ final class RenderedAdSkip {
     private RenderedAdSkip() { }
 
     static void install(ClassLoader loader) {
-        Class<?> panel = XposedHelpers.findClassIfExists(PANEL, loader);
+        Class<?> panel = Hooks.findClass(PANEL, loader);
         if (panel == null) return;
         Method current = currentAweme(panel);
         if (current == null) return;
@@ -32,8 +29,8 @@ final class RenderedAdSkip {
         int hooks = 0;
         for (Method method : panel.getDeclaredMethods()) {
             if (!"onRenderFirstFrame".equals(method.getName()) || method.getReturnType() != void.class) continue;
-            XposedBridge.hookMethod(method, new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam param) {
+            Hooks.hook(method, new Hooks.Hook() {
+                @Override protected void after(Hooks.Call param) {
                     if (!Prefs.on(Prefs.ADS)) return;
                     try {
                         Object aweme = current.invoke(param.thisObject);
@@ -62,7 +59,7 @@ final class RenderedAdSkip {
     }
 
     private static void skip(Object panel, Object aweme) {
-        if (aweme == null || Boolean.TRUE.equals(XposedHelpers.getAdditionalInstanceField(aweme, SKIPPED))) return;
+        if (aweme == null || Boolean.TRUE.equals(Hooks.getExtra(aweme, SKIPPED))) return;
         Activity activity = null;
         Object value = Reflect.get(panel, "activity");
         if (value instanceof Activity) activity = (Activity) value;
@@ -70,7 +67,7 @@ final class RenderedAdSkip {
             activity = (Activity) Reflect.call(panel, "getActivity");
         }
         if (activity == null || activity.isFinishing() || !activity.hasWindowFocus()) return;
-        XposedHelpers.setAdditionalInstanceField(aweme, SKIPPED, true);
+        Hooks.setExtra(aweme, SKIPPED, true);
         View decor = activity.getWindow().getDecorView();
         decor.postDelayed(() -> swipe(decor), 80L);
     }

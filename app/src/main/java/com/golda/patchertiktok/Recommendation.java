@@ -5,8 +5,6 @@ import android.content.res.Resources;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import de.robv.android.xposed.XC_MethodReplacement;
-import de.robv.android.xposed.XposedHelpers;
 
 /**
  * Keeps the content language on the device language while the region spoof is active,
@@ -21,18 +19,18 @@ final class Recommendation {
     }
 
     static void install(ClassLoader loader) {
-        XC_MethodReplacement language = new XC_MethodReplacement() {
-            @Override protected Object replaceHookedMethod(MethodHookParam param) {
+        Hooks.Replace language = new Hooks.Replace() {
+            @Override protected Object replace(Hooks.Call param) {
                 return language();
             }
         };
-        Class<?> service = XposedHelpers.findClassIfExists(
+        Class<?> service = Hooks.findClass(
                 "com.ss.android.ugc.aweme.contentlanguage.ContentLanguageServiceImpl", loader);
         if (service != null) {
             try {
-                XposedHelpers.findAndHookMethod(service, "getContentLanguage", language);
-                XposedHelpers.findAndHookMethod(service, "getLanguage", new XC_MethodReplacement() {
-                    @Override protected Object replaceHookedMethod(MethodHookParam param) {
+                Hooks.findAndHook(service, "getContentLanguage", language);
+                Hooks.findAndHook(service, "getLanguage", new Hooks.Replace() {
+                    @Override protected Object replace(Hooks.Call param) {
                         return new ArrayList<>(Collections.singletonList(language()));
                     }
                 });
@@ -40,11 +38,11 @@ final class Recommendation {
                 RuntimeLog.log("content language unavailable: " + error.getClass().getSimpleName());
             }
         }
-        Class<?> guide = XposedHelpers.findClassIfExists(
+        Class<?> guide = Hooks.findClass(
                 "com.ss.android.ugc.aweme.contentlanguage.api.ContentLanguageGuideServiceImpl", loader);
         if (guide != null) {
             try {
-                XposedHelpers.findAndHookMethod(guide, "getContentLanguage", language);
+                Hooks.findAndHook(guide, "getContentLanguage", language);
             } catch (Throwable ignored) { }
         }
     }

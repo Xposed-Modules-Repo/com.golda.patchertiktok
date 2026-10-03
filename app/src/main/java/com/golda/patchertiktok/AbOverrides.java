@@ -5,9 +5,6 @@ import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 
 /**
  * Overrides TikTok's server-side A/B experiments and settings. This is what unlocks comment
@@ -29,7 +26,7 @@ final class AbOverrides {
         collect();
         if (VALUES.isEmpty()) return;
         int hooks = 0;
-        Class<?> settings = XposedHelpers.findClassIfExists(SETTINGS_MANAGER, loader);
+        Class<?> settings = Hooks.findClass(SETTINGS_MANAGER, loader);
         if (settings != null) hooks += hookGetters(settings);
         Class<?> ab = Discovery.firstClass(loader, AB_MANAGER_FINGERPRINT);
         if (ab != null) hooks += hookGetters(ab);
@@ -105,8 +102,8 @@ final class AbOverrides {
             if (keyIndex < 0) continue;
             int key = keyIndex;
             try {
-                XposedBridge.hookMethod(method, new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam param) {
+                Hooks.hook(method, new Hooks.Hook() {
+                    @Override protected void after(Hooks.Call param) {
                         Object name = param.args[key];
                         if (!(name instanceof String)) return;
                         Object value = VALUES.get(name);

@@ -28,14 +28,12 @@ final class StreakSender {
     private final Method sendMethod;
     private final Class<?> callbackType;
     private final Class<?> messageType;
-    private final int metadataIndex;
     private final DeliveryLedger ledger;
     private final SharedPreferences legacy;
     private final SharedPreferences friendLedger;
 
     StreakSender(Context context, ClassLoader loader) throws ReflectiveOperationException {
         Object resolved;
-        int metadata = 4;
         try {
             resolved = StreakApi.service(loader,
                     "com.ss.android.ugc.aweme.im.lightinteract.api.platform.service.ILightInteractionPlatformService");
@@ -51,10 +49,8 @@ final class StreakSender {
                 }
             }
             if (resolved == null) throw new IllegalStateException("Light interaction service unavailable");
-            metadata = 3;
         }
         service = resolved;
-        metadataIndex = metadata;
         sendMethod = StreakSendProtocol.sendMethod(service.getClass());
         callbackType = sendMethod.getParameterTypes()[9];
         messageType = StreakSendProtocol.callbackMessageType(callbackType);
@@ -83,7 +79,8 @@ final class StreakSender {
         args[0] = "spark_v1";
         args[1] = candidate.conversation;
         args[2] = candidate.peer;
-        args[metadataIndex] = metadata();
+        // Same message extras as a flame tapped in a chat; no made-up analytics.
+        args[3] = ext();
         args[9] = Proxy.newProxyInstance(callbackType.getClassLoader(), new Class<?>[]{callbackType}, callback);
         boolean posted = MAIN.post(() -> {
             try {
@@ -116,13 +113,15 @@ final class StreakSender {
         return state.name();
     }
 
-    private static Map<String, String> metadata() {
+    /**
+     * Extras of a flame sent from a chat's action bar, as captured from TikTok itself:
+     * the source button, the chat entrance and a fresh chat-session id.
+     */
+    private static Map<String, String> ext() {
         Map<String, String> values = new HashMap<>();
-        values.put("enter_from", "streak_inbox");
-        values.put("enter_method", "auto_streak");
-        values.put("interaction_type", "quick_reaction");
-        values.put("interaction_name", "streak");
-        values.put("message_from", "spark");
+        values.put("a:src", "action_bar:spark");
+        values.put("a:entrance_type", "1");
+        values.put("a:process_id", java.util.UUID.randomUUID().toString());
         return values;
     }
 
@@ -164,13 +163,28 @@ final class StreakSender {
                         }
                     }
                     // A failure callback is terminal, but never proof that retrying is safe.
-                    if (args.length == 3) done.countDown();
+                    if (args.length == 3) {
+                        RuntimeLog.log("streak send failed: " + reason(args));
+                        done.countDown();
+                    }
                 }
             } catch (Throwable error) {
                 invalid = true;
                 done.countDown();
             }
             return null;
+        }
+
+        /** TikTok's error object (code and server message), without the chat message itself. */
+        private String reason(Object[] args) {
+            StringBuilder out = new StringBuilder();
+            for (Object arg : args) {
+                if (arg == null || messageType.isInstance(arg) || arg instanceof List<?>) continue;
+                String text = String.valueOf(arg);
+                if (out.length() > 0) out.append(' ');
+                out.append(text.length() > 300 ? text.substring(0, 300) : text);
+            }
+            return out.length() == 0 ? "no details" : out.toString();
         }
 
         private void observe(Object message) throws ReflectiveOperationException {

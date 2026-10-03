@@ -20,8 +20,8 @@ final class AutoStreakManager {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final AtomicBoolean RUNNING = new AtomicBoolean();
     private static final Runnable CHECK = AutoStreakManager::startCheck;
-    private static final long OPEN_DELAY_MS = 20_000L;
     private static final long MIN_CHECK_INTERVAL_MS = 300_000L;
+    private static final java.util.Random RANDOM = new java.util.Random();
     private static volatile Application context;
     private static volatile ClassLoader loader;
     private static volatile boolean foreground;
@@ -66,7 +66,7 @@ final class AutoStreakManager {
         if (now == lastEnabled) return;
         lastEnabled = now;
         if (!now) stop();
-        else if (foreground) schedule(OPEN_DELAY_MS);
+        else if (foreground) schedule(openDelay());
     }
 
     private static void onForeground() {
@@ -74,9 +74,14 @@ final class AutoStreakManager {
         startupRetries = 0;
         if (enabled()) {
             long remaining = MIN_CHECK_INTERVAL_MS - (SystemClock.elapsedRealtime() - lastCheckElapsed);
-            schedule(Math.max(OPEN_DELAY_MS, remaining));
+            schedule(Math.max(openDelay(), remaining));
         }
     }
+
+    /** A person opens the inbox at some point, not exactly N seconds after launch. */
+    private static long openDelay() { return between(60_000L, 120_000L); }
+
+    private static long between(long from, long to) { return from + (long) (RANDOM.nextDouble() * (to - from)); }
 
     private static void onBackground() {
         foreground = false;
@@ -146,7 +151,11 @@ final class AutoStreakManager {
                     break;
                 }
             }
-            if (current == null) { skipped++; continue; }
+            if (current == null) {
+                RuntimeLog.log("streak window " + initial.window() + ": renewed meanwhile");
+                skipped++;
+                continue;
+            }
             StreakApi.Candidate selected = current;
             String day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date());
             String result = sender.send(account, selected, day, () -> {
@@ -157,10 +166,14 @@ final class AutoStreakManager {
                     return false;
                 }
             });
+            RuntimeLog.log("streak window " + selected.window() + ": " + result);
             if ("CONFIRMED".equals(result)) confirmed++;
             else if ("UNKNOWN".equals(result) || "RETRY".equals(result)) unresolved++;
             else skipped++;
-            if (!"PREVIOUS_ATTEMPT".equals(result) && !"CANCELLED".equals(result)) Thread.sleep(3_000L);
+            // TikTok rejected or never confirmed the message: let the user know.
+            if ("UNKNOWN".equals(result)) StreakNotice.failed(context);
+            // Like going through chats by hand: a few seconds to open the next one and tap the flame.
+            if (!"PREVIOUS_ATTEMPT".equals(result) && !"CANCELLED".equals(result)) Thread.sleep(between(8_000L, 18_000L));
         }
         long next = Long.MAX_VALUE;
         long now = System.currentTimeMillis();
@@ -168,7 +181,7 @@ final class AutoStreakManager {
         RuntimeLog.log("streak check: records=" + items.size() + " " + api.summary(items, now)
                 + " eligible=" + candidates.size() + " confirmed=" + confirmed + " unresolved=" + unresolved
                 + " skipped=" + skipped + (next == Long.MAX_VALUE ? "" : " nextRiskIn=" + (next - now) / 60_000L + "m"));
-        if (next != Long.MAX_VALUE) schedule(Math.max(MIN_CHECK_INTERVAL_MS, next - now + 1_000L));
+        if (next != Long.MAX_VALUE) schedule(Math.max(MIN_CHECK_INTERVAL_MS, next - now + between(60_000L, 600_000L)));
     }
 
     private static List<StreakApi.Candidate> candidates(List<?> items, String account) throws Exception {

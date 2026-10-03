@@ -12,8 +12,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
 
 /** Strips share-tracking parameters from TikTok links when they are copied. */
 final class CleanLinks {
@@ -32,8 +30,8 @@ final class CleanLinks {
     private CleanLinks() { }
 
     static void install() {
-        XposedBridge.hookAllMethods(ClipboardManager.class, "setPrimaryClip", new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam param) {
+        Hooks.hookAll(ClipboardManager.class, "setPrimaryClip", new Hooks.Hook() {
+            @Override protected void before(Hooks.Call param) {
                 if (!Prefs.on(Prefs.CLEAN_LINKS) || param.args.length == 0
                         || !(param.args[0] instanceof ClipData)) return;
                 ClipData clip = (ClipData) param.args[0];

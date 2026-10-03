@@ -5,9 +5,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 
 /** Shows the seek bar on every regular video, including clips shorter than 30 seconds. */
 final class Seekbar {
@@ -19,20 +16,20 @@ final class Seekbar {
     private Seekbar() { }
 
     static void install(ClassLoader loader) {
-        Class<?> aweme = XposedHelpers.findClassIfExists(AWEME, loader);
+        Class<?> aweme = Hooks.findClass(AWEME, loader);
         int decision = 0;
         int shortVideo = 0;
         for (String entry : Discovery.methodsUsing(FINGERPRINT)) {
             String[] parts = entry.split("#", 2);
-            Class<?> controller = XposedHelpers.findClassIfExists(parts[0], loader);
+            Class<?> controller = Hooks.findClass(parts[0], loader);
             if (controller == null || aweme == null) continue;
             List<Method> shortMethods = new ArrayList<>();
             for (Method method : controller.getDeclaredMethods()) {
                 Class<?>[] p = method.getParameterTypes();
                 if (method.getName().equals(parts[1]) && method.getReturnType() == boolean.class
                         && p.length == 1 && p[0] == aweme) {
-                    XposedBridge.hookMethod(method, new XC_MethodHook() {
-                        @Override protected void afterHookedMethod(MethodHookParam param) {
+                    Hooks.hook(method, new Hooks.Hook() {
+                        @Override protected void after(Hooks.Call param) {
                             if (Prefs.on(Prefs.SEEKBAR) && !Boolean.TRUE.equals(param.getResult())
                                     && eligible(param.args[0])) param.setResult(true);
                         }
@@ -44,8 +41,8 @@ final class Seekbar {
             }
             // The short-clip threshold is the controller's only (boolean) -> int method.
             if (shortMethods.size() == 1) {
-                XposedBridge.hookMethod(shortMethods.get(0), new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam param) {
+                Hooks.hook(shortMethods.get(0), new Hooks.Hook() {
+                    @Override protected void after(Hooks.Call param) {
                         if (Prefs.on(Prefs.SEEKBAR)) param.setResult(0);
                     }
                 });
@@ -58,7 +55,7 @@ final class Seekbar {
 
     /** Seek bar views with setSeekBarShowType(int); types 3 and 4 hide it on short clips. */
     private static int hookShowType(ClassLoader loader) {
-        Class<?> assem = XposedHelpers.findClassIfExists(
+        Class<?> assem = Hooks.findClass(
                 "com.bytedance.tiktok.homepage.mainpagefragment.assem.MainPageSeekAssem", loader);
         if (assem == null) return 0;
         int count = 0;
@@ -68,8 +65,8 @@ final class Seekbar {
                 Class<?>[] p = method.getParameterTypes();
                 if (!"setSeekBarShowType".equals(method.getName()) || p.length != 1 || p[0] != int.class
                         || hooked.contains(method)) continue;
-                XposedBridge.hookMethod(method, new XC_MethodHook() {
-                    @Override protected void beforeHookedMethod(MethodHookParam param) {
+                Hooks.hook(method, new Hooks.Hook() {
+                    @Override protected void before(Hooks.Call param) {
                         if (Prefs.on(Prefs.SEEKBAR) && param.args[0] instanceof Integer) {
                             param.args[0] = SeekbarPolicy.normalizeShowType((Integer) param.args[0]);
                         }
@@ -84,7 +81,7 @@ final class Seekbar {
 
     private static boolean eligible(Object aweme) {
         if (aweme == null) return false;
-        Object cached = XposedHelpers.getAdditionalInstanceField(aweme, ELIGIBLE);
+        Object cached = Hooks.getExtra(aweme, ELIGIBLE);
         if (cached instanceof Boolean) return (Boolean) cached;
         boolean result;
         try {
@@ -97,7 +94,7 @@ final class Seekbar {
         } catch (Throwable ignored) {
             result = false;
         }
-        XposedHelpers.setAdditionalInstanceField(aweme, ELIGIBLE, result);
+        Hooks.setExtra(aweme, ELIGIBLE, result);
         return result;
     }
 }

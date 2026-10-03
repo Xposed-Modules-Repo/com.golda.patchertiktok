@@ -22,9 +22,6 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 
 /**
  * Adds a native "TiktokPatchXposed" row at the top of TikTok's Settings and privacy screen
@@ -53,8 +50,8 @@ final class SettingsEntry {
 
     /** Swaps in {@link ModSettingsActivity} when TikTok's settings activity is started with our extra. */
     static void installHost() {
-        XposedBridge.hookAllMethods(Instrumentation.class, "newActivity", new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam param) {
+        Hooks.hookAll(Instrumentation.class, "newActivity", new Hooks.Hook() {
+            @Override protected void before(Hooks.Call param) {
                 if (param.args.length != 3 || !(param.args[2] instanceof Intent)) return;
                 Intent intent = (Intent) param.args[2];
                 if (HOST_ACTIVITY.equals(param.args[1]) && intent.getBooleanExtra(ModSettingsActivity.EXTRA, false)) {
@@ -99,7 +96,7 @@ final class SettingsEntry {
         Method factory = null;
         for (String call : Discovery.invokedBy(FRAGMENT, "onCreate")) {
             String[] parts = call.split("#", 2);
-            Class<?> owner = XposedHelpers.findClassIfExists(parts[0], loader);
+            Class<?> owner = Hooks.findClass(parts[0], loader);
             if (owner == null) continue;
             for (Method method : owner.getDeclaredMethods()) {
                 if (!method.getName().equals(parts[1]) || !Modifier.isStatic(method.getModifiers())) continue;
@@ -113,8 +110,8 @@ final class SettingsEntry {
         }
         if (combiner == null || factory == null) throw new IllegalStateException("settings list helpers");
 
-        XposedBridge.hookMethod(combiner, new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) {
+        Hooks.hook(combiner, new Hooks.Hook() {
+            @Override protected void after(Hooks.Call param) {
                 Object result = param.getResult();
                 if (!(result instanceof List<?>) || ((List<?>) result).contains(item)) return;
                 List<Object> list = new ArrayList<>((List<?>) result);
@@ -129,8 +126,8 @@ final class SettingsEntry {
             Class<?>[] p = method.getParameterTypes();
             if (Modifier.isStatic(method.getModifiers()) && method.getReturnType() == int.class
                     && p.length == 1 && p[0] == baseItem) {
-                XposedBridge.hookMethod(method, new XC_MethodHook() {
-                    @Override protected void beforeHookedMethod(MethodHookParam param) {
+                Hooks.hook(method, new Hooks.Hook() {
+                    @Override protected void before(Hooks.Call param) {
                         if (param.args[0] == item) param.setResult(-100);
                     }
                 });
@@ -150,8 +147,8 @@ final class SettingsEntry {
         Class<?> stateType = typeArgument(privacyItem, 0);
         if (keyField == null || stateType == null) throw new IllegalStateException("privacy cell shape");
         Field key = keyField;
-        XposedBridge.hookAllMethods(privacyItem, "defaultState", new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam param) {
+        Hooks.hookAll(privacyItem, "defaultState", new Hooks.Hook() {
+            @Override protected void before(Hooks.Call param) {
                 try {
                     if (!KEY.equals(key.get(param.thisObject))) return;
                     if (state == null) state = buildState(stateType, loader);

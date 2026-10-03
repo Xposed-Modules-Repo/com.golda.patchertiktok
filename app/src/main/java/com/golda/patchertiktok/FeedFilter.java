@@ -5,9 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 
 /** Removes ads, LIVE and "people you may know" items from the feed and other video lists. */
 final class FeedFilter {
@@ -32,13 +29,13 @@ final class FeedFilter {
     private FeedFilter() { }
 
     static void install(ClassLoader loader) {
-        Class<?> feed = XposedHelpers.findClassIfExists("com.ss.android.ugc.aweme.feed.model.FeedItemList", loader);
+        Class<?> feed = Hooks.findClass("com.ss.android.ugc.aweme.feed.model.FeedItemList", loader);
         if (feed != null) hookFeedItemList(feed);
         for (String[] getter : LIST_GETTERS) {
-            Class<?> type = XposedHelpers.findClassIfExists(getter[0], loader);
+            Class<?> type = Hooks.findClass(getter[0], loader);
             if (type == null) continue;
-            XposedBridge.hookAllMethods(type, getter[1], new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam param) {
+            Hooks.hookAll(type, getter[1], new Hooks.Hook() {
+                @Override protected void after(Hooks.Call param) {
                     if (param.getResult() instanceof List<?>) param.setResult(filter((List<?>) param.getResult()));
                 }
             });
@@ -48,47 +45,47 @@ final class FeedFilter {
     }
 
     private static void hookFeedItemList(Class<?> feed) {
-        XposedBridge.hookAllMethods(feed, "setItems", new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam param) {
+        Hooks.hookAll(feed, "setItems", new Hooks.Hook() {
+            @Override protected void before(Hooks.Call param) {
                 if (param.args.length == 0 || !(param.args[0] instanceof List<?>)) return;
                 List<?> filtered = filter((List<?>) param.args[0]);
                 param.args[0] = filtered;
                 remember(param.thisObject, filtered);
             }
         });
-        XposedBridge.hookAllMethods(feed, "getItems", new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) {
+        Hooks.hookAll(feed, "getItems", new Hooks.Hook() {
+            @Override protected void after(Hooks.Call param) {
                 if (!(param.getResult() instanceof List<?>)) return;
                 List<?> items = (List<?>) param.getResult();
-                Object cached = XposedHelpers.getAdditionalInstanceField(param.thisObject, SNAPSHOT);
+                Object cached = Hooks.getExtra(param.thisObject, SNAPSHOT);
                 if (cached instanceof Snapshot && ((Snapshot) cached).matches(items)) return;
                 List<?> filtered = filter(items);
                 if (filtered != items) {
                     try {
-                        XposedHelpers.setObjectField(param.thisObject, "items", filtered);
+                        Hooks.setField(param.thisObject, "items", filtered);
                     } catch (Throwable ignored) { }
                     param.setResult(filtered);
                 }
                 remember(param.thisObject, filtered);
             }
         });
-        XposedBridge.hookAllMethods(feed, "setPreloadAds", new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam param) {
+        Hooks.hookAll(feed, "setPreloadAds", new Hooks.Hook() {
+            @Override protected void before(Hooks.Call param) {
                 if (Prefs.on(Prefs.ADS) && param.args.length > 0) param.args[0] = Collections.emptyList();
             }
         });
-        XposedBridge.hookAllMethods(feed, "getPreloadAds", new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) {
+        Hooks.hookAll(feed, "getPreloadAds", new Hooks.Hook() {
+            @Override protected void after(Hooks.Call param) {
                 if (Prefs.on(Prefs.ADS)) param.setResult(Collections.emptyList());
             }
         });
-        XposedBridge.hookAllMethods(feed, "setHasAd", new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam param) {
+        Hooks.hookAll(feed, "setHasAd", new Hooks.Hook() {
+            @Override protected void before(Hooks.Call param) {
                 if (Prefs.on(Prefs.ADS) && param.args.length > 0) param.args[0] = false;
             }
         });
-        XposedBridge.hookAllMethods(feed, "isHasAd", new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) {
+        Hooks.hookAll(feed, "isHasAd", new Hooks.Hook() {
+            @Override protected void after(Hooks.Call param) {
                 if (Prefs.on(Prefs.ADS)) param.setResult(false);
             }
         });
@@ -96,8 +93,8 @@ final class FeedFilter {
 
     /** Mid-roll and in-video ad payloads that are not separate feed items. */
     private static void hookAdFields(ClassLoader loader) {
-        XC_MethodHook zero = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) {
+        Hooks.Hook zero = new Hooks.Hook() {
+            @Override protected void after(Hooks.Call param) {
                 if (!Prefs.on(Prefs.ADS)) return;
                 Class<?> type = ((Method) param.method).getReturnType();
                 if (type == int.class) param.setResult(0);
@@ -110,18 +107,18 @@ final class FeedFilter {
         hookAll(loader, "com.ss.android.ugc.aweme.feed.model.Aweme", zero, "getAdInfo", "getAdExtInfo");
     }
 
-    private static void hookAll(ClassLoader loader, String className, XC_MethodHook hook, String... names) {
-        Class<?> type = XposedHelpers.findClassIfExists(className, loader);
+    private static void hookAll(ClassLoader loader, String className, Hooks.Hook hook, String... names) {
+        Class<?> type = Hooks.findClass(className, loader);
         if (type == null) return;
         for (String name : names) {
             try {
-                XposedBridge.hookAllMethods(type, name, hook);
+                Hooks.hookAll(type, name, hook);
             } catch (Throwable ignored) { }
         }
     }
 
     private static void remember(Object owner, List<?> items) {
-        XposedHelpers.setAdditionalInstanceField(owner, SNAPSHOT, new Snapshot(items));
+        Hooks.setExtra(owner, SNAPSHOT, new Snapshot(items));
     }
 
     private static final class Snapshot {

@@ -13,8 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
 
 /**
  * Read-only access to TikTok's local streak records. The obfuscated data provider is found by a
@@ -40,8 +38,8 @@ final class StreakApi {
             try {
                 Class<?> type = Class.forName(name, false, loader);
                 if (listMethod(type) == null) continue;
-                XposedBridge.hookAllConstructors(type, new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam param) {
+                Hooks.hookConstructors(type, new Hooks.Hook() {
+                    @Override protected void after(Hooks.Call param) {
                         if (!param.hasThrowable()) capturedProvider = param.thisObject;
                     }
                 });

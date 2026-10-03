@@ -6,9 +6,6 @@ import android.widget.ImageView;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 
 /** Hides the LIVE entry in the top-left corner of the home feed. */
 final class LiveButton {
@@ -17,7 +14,7 @@ final class LiveButton {
     private LiveButton() { }
 
     static void install(ClassLoader loader) {
-        Class<?> generator = XposedHelpers.findClassIfExists(GENERATOR, loader);
+        Class<?> generator = Hooks.findClass(GENERATOR, loader);
         if (generator == null) {
             RuntimeLog.log("LIVE button: generator not found");
             return;
@@ -25,40 +22,40 @@ final class LiveButton {
         for (Method method : generator.getDeclaredMethods()) {
             Class<?>[] p = method.getParameterTypes();
             if ("enabled".equals(method.getName()) && method.getReturnType() == boolean.class && p.length == 0) {
-                XposedBridge.hookMethod(method, new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam param) {
+                Hooks.hook(method, new Hooks.Hook() {
+                    @Override protected void after(Hooks.Call param) {
                         if (Prefs.on(Prefs.LIVE)) param.setResult(false);
                     }
                 });
             } else if (View.class.isAssignableFrom(method.getReturnType()) && p.length == 1
                     && "android.content.Context".equals(p[0].getName())) {
-                XposedBridge.hookMethod(method, new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam param) {
+                Hooks.hook(method, new Hooks.Hook() {
+                    @Override protected void after(Hooks.Call param) {
                         if (!Prefs.on(Prefs.LIVE)) return;
                         hide(param.getResult());
                         hideIcons(param.thisObject);
                     }
                 });
             } else if (method.getReturnType() == void.class && p.length == 1 && p[0] == boolean.class) {
-                XposedBridge.hookMethod(method, new XC_MethodHook() {
-                    @Override protected void beforeHookedMethod(MethodHookParam param) {
+                Hooks.hook(method, new Hooks.Hook() {
+                    @Override protected void before(Hooks.Call param) {
                         if (Prefs.on(Prefs.LIVE)) param.args[0] = false;
                     }
 
-                    @Override protected void afterHookedMethod(MethodHookParam param) {
+                    @Override protected void after(Hooks.Call param) {
                         if (Prefs.on(Prefs.LIVE)) hideIcons(param.thisObject);
                     }
                 });
             }
         }
-        XC_MethodHook keepHidden = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) {
+        Hooks.Hook keepHidden = new Hooks.Hook() {
+            @Override protected void after(Hooks.Call param) {
                 if (Prefs.on(Prefs.LIVE)) hideIcons(param.thisObject);
             }
         };
-        XposedBridge.hookAllMethods(generator, "onCreate", keepHidden);
-        XposedBridge.hookAllMethods(generator, "onResume", keepHidden);
-        XposedBridge.hookAllMethods(generator, "onLiveIconEntranceEnable", keepHidden);
+        Hooks.hookAll(generator, "onCreate", keepHidden);
+        Hooks.hookAll(generator, "onResume", keepHidden);
+        Hooks.hookAll(generator, "onLiveIconEntranceEnable", keepHidden);
     }
 
     private static void hideIcons(Object generator) {

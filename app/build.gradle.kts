@@ -10,8 +10,8 @@ android {
         applicationId = "com.golda.patchertiktok"
         minSdk = 27
         targetSdk = 36
-        versionCode = 41
-        versionName = "4.0"
+        versionCode = 42
+        versionName = "4.0.1"
     }
     buildFeatures {
         buildConfig = true
@@ -33,7 +33,8 @@ android {
         }
     }
     packaging {
-        resources.excludes += listOf("META-INF/**", "kotlin/**", "**.properties")
+        // META-INF/xposed/* is the modern module descriptor and must stay in the APK.
+        resources.excludes += listOf("META-INF/*", "META-INF/androidx/**", "META-INF/com/**", "kotlin/**", "**.properties")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -47,6 +48,6 @@ android {
 
 dependencies {
     testImplementation(libs.junit)
+    compileOnly(libs.libxposed.api)
     compileOnly(files("libs/xposed-api-82.jar"))
-    testImplementation(files("libs/xposed-api-82.jar"))
 }
