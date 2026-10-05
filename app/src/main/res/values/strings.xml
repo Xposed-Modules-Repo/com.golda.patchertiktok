@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name" translatable="false">TiktokPatchXposed</string>
-    <string name="module_description">No ads, comment reposts, new profile layout, clean links, downloads and region. Settings: TikTok → Settings and privacy.</string>
-</resources>
